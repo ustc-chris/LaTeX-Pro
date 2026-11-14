@@ -1,0 +1,8 @@
+import path from 'node:path';
+import {maskNonCode,normalizeRelative} from './model';
+export interface FileChange{file:string;before:string;after:string;renameTo?:string}
+export function reverseChanges(changes:FileChange[]):FileChange[]{return changes.map(c=>({file:c.renameTo||c.file,before:c.after,after:c.before,...(c.renameTo?{renameTo:c.file}:{})}));}
+export function renamePlan(documents:{file:string;text:string}[],from:string,to:string):FileChange[]{
+ from=normalizeRelative(from);to=normalizeRelative(to);if(!to.endsWith('.tex')||from===to||path.posix.dirname(from)!==path.posix.dirname(to))throw Error('请在同一目录填写新的 .tex 文件名');if(documents.some(d=>d.file===to))throw Error('目标文件已存在');if(!documents.some(d=>d.file===from))throw Error('原文件不存在');const known=new Set(documents.map(d=>d.file));
+ return documents.flatMap(d=>{let after=d.text;const edits:{start:number;end:number;text:string}[]=[];for(const m of maskNonCode(d.text).matchAll(/\\(?:input|include)\s*\{([^}]+)\}/g)){const raw=m[1],name=raw.endsWith('.tex')?raw:raw+'.tex',local=path.posix.normalize(path.posix.join(path.posix.dirname(d.file),name)),resolved=known.has(local)?local:path.posix.normalize(name);if(resolved!==from)continue;const replacement=path.posix.join(path.posix.dirname(raw),path.posix.basename(to,raw.endsWith('.tex')?'':'.tex'));const start=m.index!+m[0].indexOf('{')+1;edits.push({start,end:start+raw.length,text:replacement});}for(const e of edits.reverse())after=after.slice(0,e.start)+e.text+after.slice(e.end);return after!==d.text||d.file===from?[{file:d.file,before:d.text,after,...(d.file===from?{renameTo:to}:{})}]:[];});
+}

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+*.vsix
+.DS_Store
+
+# TeX 编译中间文件
+*.aux
+*.log
+*.out
+*.toc
+*.synctex*
+*.fls
+*.fdb_latexmk
+*.blg
+
+
+/node_modules

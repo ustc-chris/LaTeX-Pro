@@ -1,0 +1,20 @@
+\section{方法}\label{sec:method}
+% !lp begin {"id":"method-design","title":"研究设计","status":"final","tag":"终稿"}
+假设我们记录七天的阅读时长，以每天的分钟数 $x_i$ 表示观测值。示例使用小规模数据，重点是说明结构与排版，而非推断真实人群的行为。
+% !lp end
+\subsection{指标定义}
+% !lp begin {"id":"method-equation","title":"平均值与离散程度","status":"draft","tag":"人工初稿","note":"尝试编辑公式"}
+设观测天数为 $n$，平均阅读时长和样本标准差分别为
+\begin{equation}\label{eq:mean}
+\bar{x}=\frac{1}{n}\sum_{i=1}^{n}x_i,\qquad s=\sqrt{\frac{1}{n-1}\sum_{i=1}^{n}(x_i-\bar{x})^2}.
+\end{equation}
+式\eqref{eq:mean}中的平均值反映整体水平，而标准差描述每日记录的离散程度。
+% !lp end
+\subsection{整理流程}
+% !lp begin {"id":"method-workflow","title":"整理流程","status":"draft","tag":"人工初稿"}
+\begin{itemize}
+\item \textbf{收集：}将每天的记录整理为统一单位。
+\item \textbf{检查：}确认是否存在缺失记录和异常值。
+\item \textbf{分析：}计算汇总指标，并记录解释时的限制。
+\end{itemize}
+% !lp end

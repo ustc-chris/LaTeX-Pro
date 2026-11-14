@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {projectProjection,editProjectProjection,projectLocation,projectOffset} from '../src/project-view';
+import {overviewWindow} from '../src/webview/EditorOverview';
+test('whole-document projection expands includes in order and maps changes back to exact files',()=>{
+ const files=[{file:'main.tex',text:'before\\input{a}\nafter\\include{b}\nend',base:'main disk'},{file:'a.tex',text:'Alpha',base:'Alpha'},{file:'b.tex',text:'Beta',base:'Beta'},{file:'unused.tex',text:'Unused',base:'Unused'}],p=projectProjection(files,'main.tex','test');assert.deepEqual(p.parts.map(s=>s.file),['main.tex','a.tex','main.tex','b.tex','main.tex']);assert.equal(p.files.length,3);const at=p.text.indexOf('Alpha');assert.deepEqual(projectLocation(p,at+2),{file:'a.tex',offset:2});assert.equal(projectOffset(p,'a.tex',2),at+2);
+ const changed=editProjectProjection(p,p.text.replace('Alpha','Longer alpha').replace('Beta','B'));assert.equal(changed.files.find(f=>f.file==='a.tex')!.text,'Longer alpha');assert.equal(changed.files.find(f=>f.file==='b.tex')!.text,'B');assert.equal(changed.files.find(f=>f.file==='main.tex')!.text,files[0].text);assert.equal(changed.files[0].base,'main disk');assert.ok(!changed.files.some(f=>f.text.includes('文件：')));
+ assert.throws(()=>editProjectProjection(p,p.text.replace(p.parts[1].header,'')),/分界/);assert.throws(()=>editProjectProjection(p,p.text+'typed outside'),/结束/);
+});
+test('recursive or repeated includes never duplicate an editable file',()=>{const files=[{file:'main.tex',text:'\\input{a}\\input{a}',base:''},{file:'a.tex',text:'\\input{main}A',base:''}],p=projectProjection(files,'main.tex','x');assert.equal(p.parts.filter(s=>s.file==='a.tex').length,1);assert.equal(editProjectProjection(p,p.text).files.find(f=>f.file==='main.tex')?.text,files[0].text);});
+test('minimap shows a moving local window and its viewport slider tracks progress',()=>{const a=overviewWindow(20000,600,0),b=overviewWindow(20000,600,9700),c=overviewWindow(20000,600,19400);assert.equal(a.span,2500);assert.ok(a.span<20000);assert.equal(a.origin,0);assert.ok(b.origin>0&&b.origin<9700);assert.equal(c.origin,17500);assert.equal(c.sliderTop+c.sliderHeight,600);assert.equal(b.sliderTop,(600-b.sliderHeight)/2);});

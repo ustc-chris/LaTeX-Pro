@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {scanFile,normalizeRelative,maskNonCode} from '../src/model';
+test('unmarked documents stop at file level',()=>{const f=scanFile('a.tex','\\section{Hello}\ntext');assert.equal(f.units.length,1);assert.equal(f.units[0].unmarked,true);});
+test('marked fragment has exact editable content offsets and hierarchy',()=>{const text='\\section{研究}\n\\subsection{方法}\n% !lp begin {"id":"a","title":"段落","status":"review"}\n正文\n% !lp end\n';const f=scanFile('a.tex',text);const u=f.units.find(x=>x.kind==='fragment')!;assert.equal(text.slice(u.start,u.end),'正文\n');assert.equal(u.parent,f.units.find(x=>x.kind==='subsection')!.id);assert.equal(u.status,'draft');});
+test('invalid and duplicate metadata are reported',()=>{const f=scanFile('a.tex','% !lp begin {"id":"a","title":"A"}\nx\n% !lp end\n% !lp begin {"id":"a","title":"B"}\ny\n% !lp end');assert.ok(f.issues.some(x=>x.includes('重复')));});
+test('headings close at the next sibling and ignore commented commands',()=>{const text='\\section{A}\n% \\section{Fake}\n% !lp begin {"id":"a","title":"A"}\nx\n% !lp end\n\\section{B}\n';const f=scanFile('a.tex',text);assert.equal(f.units.filter(u=>u.kind==='section').length,2);assert.equal(f.units[1].end,text.indexOf('\\section{B}'));});
+test('verbatim and comment references are not scanned',()=>{const f=scanFile('a.tex','% \\input{bad}\n\\begin{verbatim}\n\\input{bad2}\n\\end{verbatim}\n\\input{good}');assert.deepEqual(f.references,['good']);});
+test('workspace paths cannot escape root',()=>{assert.throws(()=>normalizeRelative('../outside'));assert.throws(()=>normalizeRelative('/tmp/file'));assert.throws(()=>normalizeRelative('C:\\file'));assert.equal(normalizeRelative('sections/../main.tex'),'main.tex');});
+test('comment masking preserves offsets for full-document expansion',()=>{const text='% 中文 \\input{ignored}\n\\begin{verbatim}\n\\input{also-ignored}\n\\end{verbatim}\n\\input{actual}';const masked=maskNonCode(text);assert.equal(masked.length,text.length);assert.equal(masked.indexOf('\\input'),text.indexOf('\\input{actual}'));});

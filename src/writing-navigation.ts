@@ -1,0 +1,5 @@
+import type {DocumentNode} from './document';
+import type {Unit} from './model';
+export interface SemanticNode{unit:Unit;path:Unit[];detail:string}
+export function semanticNodes(forest:DocumentNode[]){const out:SemanticNode[]=[];function walk(nodes:DocumentNode[],parents:Unit[],labels:string[]){const counts:Record<string,number>={};for(const n of nodes){const u=n.unit,k=u.kind;counts[k]=(counts[k]||0)+1;const kind=k==='chapter'?'章':k==='section'?'节':k==='subsection'||k==='subsubsection'?'目':k==='fragment'?'段':k==='abstract'?'摘要':'文件',label=k==='file'?u.title:`第${counts[k]}${kind} ${u.title}`,path=[...parents,u],chain=k==='file'?labels:[...labels,label];out.push({unit:u,path,detail:chain.join(' › ')||label});walk(n.children,path,chain);}}walk(forest,[],[]);return out;}
+export function trackedSemantic(nodes:SemanticNode[],file:string,offset:number){return nodes.filter(n=>n.unit.file===file&&n.unit.start<=offset&&n.unit.end>=offset).sort((a,b)=>(a.unit.end-a.unit.start)-(b.unit.end-b.unit.start))[0];}

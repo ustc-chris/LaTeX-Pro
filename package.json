@@ -1,0 +1,571 @@
+{
+  "name": "latex-pro",
+  "displayName": "LaTeX Pro",
+  "description": "以片段为单位组织长文档的 LaTeX 工作台",
+  "version": "0.11.0",
+  "publisher": "zhenyu-zhao",
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.110.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onCustomEditor:latexPro.editor"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "latexPro.open",
+        "title": "LaTeX Pro: 打开工作台"
+      },
+      {
+        "command": "latexPro.structure",
+        "title": "LaTeX Pro: 打开文档结构"
+      },
+      {
+        "command": "latexPro.bind",
+        "title": "LaTeX Pro: 绑定当前项目"
+      },
+      {
+        "command": "latexPro.search",
+        "title": "LaTeX Pro: 全文搜索"
+      },
+      {
+        "command": "latexPro.startupDiagnostics",
+        "title": "LaTeX Pro: 查看启动诊断"
+      },
+      {
+        "command": "latexPro.enableDebug",
+        "title": "LaTeX Pro: 开启 Debug"
+      },
+      {
+        "command": "latexPro.finishDebugProfile",
+        "title": "LaTeX Pro: 结束 CPU 采样并查看报告"
+      },
+      {
+        "command": "latexPro.isolateHost",
+        "title": "LaTeX Pro: 配置独立宿主"
+      },
+      {
+        "command": "latexPro.clearHostIsolation",
+        "title": "LaTeX Pro: 移除工作区独立宿主配置"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "latexPro.open",
+          "when": "resourceExtname == .tex",
+          "group": "navigation"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "latexPro.editor",
+        "displayName": "LaTeX Pro 工作台",
+        "selector": [
+          {
+            "filenamePattern": "*.tex"
+          }
+        ],
+        "priority": "option"
+      }
+    ],
+    "configuration": {
+      "title": "LaTeX Pro",
+      "properties": {
+        "latexPro.mainFile": {
+          "type": "string",
+          "default": "",
+          "description": "相对项目根目录的主入口文件"
+        },
+        "latexPro.autoScan": {
+          "type": "boolean",
+          "default": true,
+          "description": "文件保存、新增或删除后更新结构"
+        },
+        "latexPro.fontSize": {
+          "type": "number",
+          "default": 14,
+          "minimum": 10,
+          "maximum": 28
+        },
+        "latexPro.wordWrap": {
+          "type": "boolean",
+          "default": true
+        },
+        "latexPro.defaultLayout": {
+          "type": "string",
+          "enum": [
+            "source",
+            "split",
+            "pdf"
+          ],
+          "default": "source"
+        },
+        "latexPro.previewWidth": {
+          "type": "number",
+          "default": 760,
+          "minimum": 400,
+          "maximum": 1400
+        },
+        "latexPro.projectName": {
+          "type": "string",
+          "default": "",
+          "description": "工作台右上角显示的项目名称"
+        },
+        "latexPro.defaultView": {
+          "type": "string",
+          "enum": [
+            "structure",
+            "work",
+            "references",
+            "ai",
+            "compile"
+          ],
+          "default": "work"
+        },
+        "latexPro.compiler": {
+          "type": "string",
+          "enum": [
+            "pdflatex",
+            "xelatex",
+            "lualatex",
+            "custom"
+          ],
+          "default": "pdflatex"
+        },
+        "latexPro.theme": {
+          "type": "string",
+          "enum": [
+            "system",
+            "light",
+            "dark"
+          ],
+          "default": "system"
+        },
+        "latexPro.aiCodexPath": {
+          "type": "string",
+          "default": "",
+          "description": "Codex CLI 路径，留空自动查找"
+        },
+        "latexPro.compilerCommand": {
+          "type": "string",
+          "default": "",
+          "description": "自定义编译程序完整路径"
+        },
+        "latexPro.compilerArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "-synctex=1",
+            "-interaction=nonstopmode",
+            "%DOC%"
+          ],
+          "description": "编译参数，支持 %DOC%、%ROOT%"
+        },
+        "latexPro.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "记录启动、文件加载与前端细节，并在启动后采样 30 秒 CPU，报告保存在扩展日志目录。"
+        },
+        "latexPro.autoHostIsolation": {
+          "type": "boolean",
+          "default": true,
+          "description": "自动配置 LaTeX Pro 独立宿主；没有项目 JSON 时使用全局设置，已有项目 JSON 时使用项目设置。首次配置后需重载窗口。"
+        },
+        "latexPro.historyLimit": {
+          "type": "integer",
+          "default": 335,
+          "minimum": 10,
+          "maximum": 10000,
+          "description": "当前项目持久保存的撤销／重做操作条数。未保存草稿独立保留。"
+        },
+        "latexPro.aiAgent": {
+          "type": "string",
+          "enum": [
+            "codex",
+            "dsh",
+            "opencode",
+            "claude"
+          ],
+          "default": "codex",
+          "description": "AI Agent，目前支持 Codex。"
+        },
+        "latexPro.aiPrompt": {
+          "type": "string",
+          "default": "",
+          "maxLength": 2000,
+          "description": "所有 AI 会话共享的补充提示，建议保持简短。"
+        },
+        "latexPro.previewFontSize": {
+          "type": "number",
+          "default": 16,
+          "minimum": 12,
+          "maximum": 24,
+          "description": "快速预览的正文字号"
+        },
+        "latexPro.agent": {
+          "type": "object",
+          "default": {
+            "name": "",
+            "path": ""
+          },
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "enum": [
+                "",
+                "codex",
+                "dsh",
+                "opencode",
+                "claude"
+              ],
+              "default": ""
+            },
+            "path": {
+              "type": "string",
+              "default": ""
+            },
+            "version": {
+              "type": "string"
+            },
+            "signature": {
+              "type": "string"
+            }
+          },
+          "description": "已识别的 Agent 名称与命令行位置，自动保存版本及文件特征；插件更新后复用。名称为空时按 Codex、DSH、OpenCode、Claude 检测。"
+        },
+        "latexPro.latex.tools": {
+          "type": "array",
+          "default": [
+            {
+              "name": "latexmk",
+              "command": "latexmk",
+              "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-pdf",
+                "-outdir=%OUTDIR%",
+                "%DOC%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "lualatexmk",
+              "command": "latexmk",
+              "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-lualatex",
+                "-outdir=%OUTDIR%",
+                "%DOC%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "xelatexmk",
+              "command": "latexmk",
+              "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-xelatex",
+                "-outdir=%OUTDIR%",
+                "%DOC%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "latexmk_rconly",
+              "command": "latexmk",
+              "args": [
+                "%DOC%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "pdflatex",
+              "command": "pdflatex",
+              "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-output-directory=%OUTDIR%",
+                "%DOC%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "xelatex",
+              "command": "xelatex",
+              "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-output-directory=%OUTDIR%",
+                "%DOC%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "lualatex",
+              "command": "lualatex",
+              "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-output-directory=%OUTDIR%",
+                "%DOC%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "bibtex",
+              "command": "bibtex",
+              "args": [
+                "%DOCFILE%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "biber",
+              "command": "biber",
+              "args": [
+                "--input-directory",
+                "%OUTDIR%",
+                "--output-directory",
+                "%OUTDIR%",
+                "%DOCFILE%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "rnw2tex",
+              "command": "Rscript",
+              "args": [
+                "-e",
+                "knitr::opts_knit$set(concordance = TRUE); knitr::knit('%DOCFILE_EXT%')"
+              ],
+              "env": {}
+            },
+            {
+              "name": "jnw2tex",
+              "command": "julia",
+              "args": [
+                "-e",
+                "using Weave; weave(\"%DOC_EXT%\", doctype=\"tex\")"
+              ],
+              "env": {}
+            },
+            {
+              "name": "jnw2texminted",
+              "command": "julia",
+              "args": [
+                "-e",
+                "using Weave; weave(\"%DOC_EXT%\", doctype=\"texminted\")"
+              ],
+              "env": {}
+            },
+            {
+              "name": "pnw2tex",
+              "command": "pweave",
+              "args": [
+                "-f",
+                "tex",
+                "%DOC_EXT%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "pnw2texminted",
+              "command": "pweave",
+              "args": [
+                "-f",
+                "texminted",
+                "%DOC_EXT%"
+              ],
+              "env": {}
+            },
+            {
+              "name": "tectonic",
+              "command": "tectonic",
+              "args": [
+                "--synctex",
+                "--keep-logs",
+                "--print",
+                "--outdir",
+                "%OUTDIR%",
+                "%DOC_EXT%"
+              ],
+              "env": {}
+            }
+          ],
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "command",
+              "args"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "编译工具定义，支持 name、command、args、env 和 LaTeX Workshop 风格占位符。"
+        },
+        "latexPro.latex.recipes": {
+          "type": "array",
+          "default": [
+            {
+              "name": "latexmk · PDFLaTeX",
+              "tools": [
+                "latexmk"
+              ]
+            },
+            {
+              "name": "latexmk · XeLaTeX",
+              "tools": [
+                "xelatexmk"
+              ]
+            },
+            {
+              "name": "latexmk · LuaLaTeX",
+              "tools": [
+                "lualatexmk"
+              ]
+            },
+            {
+              "name": "xe",
+              "tools": [
+                "xelatex"
+              ]
+            },
+            {
+              "name": "xe->bibtex->xe->xe",
+              "tools": [
+                "xelatex",
+                "bibtex",
+                "xelatex",
+                "xelatex"
+              ]
+            }
+          ],
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "tools"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "tools": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "description": "编译配方，按顺序运行 tools 中的工具。"
+        },
+        "latexPro.latex.recipe.default": {
+          "type": "string",
+          "default": "latexmk · PDFLaTeX",
+          "description": "默认编译配方名称。"
+        },
+        "latexPro.latex.outDir": {
+          "type": "string",
+          "default": ".",
+          "description": "项目内的编译输出目录，支持 %OUTDIR% 占位符引用。"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "latexPro.search",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "latexPro.active"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs && node scripts/notices.mjs",
+    "check": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts",
+    "test:ui": "npm run build && esbuild src/model.ts --bundle --platform=node --format=cjs --outfile=dist/test-model.cjs && esbuild src/document.ts --bundle --platform=node --format=cjs --outfile=dist/test-document.cjs && node scripts/test-fixture.mjs && node test/ui-v4.mjs",
+    "package": "vsce package --no-dependencies --allow-missing-repository",
+    "vscode:prepublish": "npm run build",
+    "test:dom": "esbuild src/model.ts --bundle --platform=node --format=cjs --outfile=dist/test-model.cjs && node test/ui-dom.mjs && node test/pdf-controls.mjs && node test/project-editor.mjs && node test/preview-rendering.mjs && node test/preview-pdf.mjs && node test/pdf-lifecycle.mjs",
+    "test:codex": "node --import tsx test/codex-smoke.ts",
+    "test:map": "esbuild src/model.ts --bundle --platform=node --format=cjs --outfile=dist/test-model.cjs && node test/map-performance.mjs && node test/map-labels.mjs && node test/map-editing.mjs && node test/map-preload.mjs",
+    "test:compile": "node --import tsx test/compile-smoke.ts"
+  },
+  "license": "MIT",
+  "overrides": {
+    "dompurify": "^3.4.17",
+    "minimatch": "^11.0.1"
+  },
+  "dependencies": {
+    "@unified-latex/unified-latex-to-hast": "^1.8.4",
+    "@unified-latex/unified-latex-util-parse": "^1.8.4",
+    "@xyflow/react": "^12.12.1",
+    "katex": "^0.19.1",
+    "monaco-editor": "^0.57.0",
+    "pdfjs-dist": "^6.5.438",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "jsonc-parser": "^3.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/katex": "^0.16.8",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/vscode": "^1.110.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.28.2",
+    "jsdom": "^29.1.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ustc-chris/LaTeX-Pro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ustc-chris/LaTeX-Pro/issues"
+  },
+  "homepage": "https://github.com/ustc-chris/LaTeX-Pro#readme"
+}

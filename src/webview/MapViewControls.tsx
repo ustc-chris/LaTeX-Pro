@@ -1,0 +1,3 @@
+import React,{useSyncExternalStore} from 'react';
+import {mapKey,getMapDocument,subscribeMapDocument,setMapMode} from './map-documents';
+export default function MapViewControls({file,id}:{file:string;id:string}){const key=mapKey(file,id),doc=useSyncExternalStore(fn=>subscribeMapDocument(key,fn),()=>getMapDocument(key));return <div className="atlas-view-controls nodrag nopan" onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()} onDoubleClick={e=>e.stopPropagation()}><button className={doc.mode==='code'?'active':''} onClick={()=>setMapMode(key,'code')}>源码</button><button className={doc.mode==='preview'?'active':''} onClick={()=>setMapMode(key,'preview')}>预览</button></div>;}

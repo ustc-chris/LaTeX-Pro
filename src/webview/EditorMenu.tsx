@@ -1,0 +1,13 @@
+import React,{useEffect,useLayoutEffect,useRef} from 'react';
+import {Icon} from './Icon';
+import {createPortal} from 'react-dom';
+export interface EditorActions{copy:()=>void;cut:()=>void;paste:()=>void;ai:(queue:boolean)=>void;selected:boolean;readonly:boolean;pasteDisabled?:boolean}
+export default function EditorMenu({x,y,actions,onClose}:{x:number;y:number;actions:EditorActions;onClose:()=>void}){const ref=useRef<HTMLDivElement>(null);useEffect(()=>{ref.current?.focus({preventScroll:true});const close=()=>onClose();window.addEventListener('pointerdown',close);return ()=>window.removeEventListener('pointerdown',close);},[]);useLayoutEffect(()=>{const el=ref.current;if(!el)return;const r=el.getBoundingClientRect();el.style.left=Math.max(4,Math.min(x,window.innerWidth-r.width-4))+'px';el.style.top=Math.max(4,Math.min(y,window.innerHeight-r.height-4))+'px';},[x,y]);return createPortal(<div ref={ref} tabIndex={-1} className="node-context-menu" role="menu" style={{position:'fixed',left:x,top:y,zIndex:120}} onPointerDown={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Escape')onClose();}}>{([{icon:'copy',label:'复制',disabled:!actions.selected,run:actions.copy},{icon:'paste',label:'粘贴',disabled:actions.readonly||actions.pasteDisabled,run:actions.paste},{icon:'cut',label:'剪切',disabled:actions.readonly||actions.pasteDisabled||!actions.selected,run:actions.cut},{icon:'ai',label:'AI 修改',disabled:actions.readonly,run:()=>actions.ai(false)},{icon:'cart',label:'提交修改需求',disabled:actions.readonly,run:()=>actions.ai(true)}]).map(a=><button role="menuitem" key={a.label} disabled={a.disabled} onClick={()=>{a.run();onClose();}}><Icon name={a.icon}/>{a.label}</button>)}</div>,document.body);}
+let transport:(type:string,data:Record<string,unknown>)=>void=()=>{};let serial=0;
+const pending=new Map<number,{resolve:(text:string)=>void;reject:(e:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
+export function configureClipboard(send:typeof transport){transport=send;}
+window.addEventListener('message',e=>{if(e.data.type==='clipboardResult'){const p=pending.get(e.data.id);if(p){clearTimeout(p.timer);pending.delete(e.data.id);p.resolve(e.data.text);}}});
+export function writeClipboard(text:string){transport('clipboardWrite',{text});}
+export function readClipboard(){return new Promise<string>((resolve,reject)=>{const id=++serial,timer=setTimeout(()=>{pending.delete(id);transport('notify',{message:'读取剪贴板超时，请重试'});reject(Error('剪贴板超时'));},5000);pending.set(id,{resolve,reject,timer});transport('clipboardRead',{id});});}
+
+export function notifyEditor(message:string){transport('notify',{message});}

@@ -1,0 +1,16 @@
+export interface CitationUse{file:string;start:number;end:number;line:number}
+export interface BibEntry{key:string;type:string;fields:Record<string,string>;file:string;source:string;start:number;end:number;uses:CitationUse[]}
+export interface Bibliography{entries:BibEntry[];issues:string[]}
+function clean(value:string){return value.replace(/[{}]/g,'').replace(/\\(?:textit|textbf|emph)\b/g,'').replace(/\\["'`^~=]\s*([A-Za-z])/g,'$1').replace(/\\&/g,'&').replace(/\s+/g,' ').trim();}
+export function parseBibliography(file:string,text:string):Bibliography{
+ const entries:BibEntry[]=[],issues:string[]=[];let i=0;const macros=new Map<string,string>();
+ while(i<text.length){if(text[i]==='%'){i=text.indexOf('\n',i);if(i<0)break;continue;}if(text[i]!=='@'){i++;continue;}const start=i,match=text.slice(i).match(/^@(\w+)\s*([{(])/);if(!match){i++;continue;}const type=match[1].toLowerCase(),close=match[2]==='{'?'}':')';i+=match[0].length;let depth=0,quoted=false,end=i;
+  for(;end<text.length;end++){const c=text[end];if(c==='\\'){end++;continue;}if(c==='"'&&depth===0)quoted=!quoted;if(!quoted){if(c==='{')depth++;else if(c==='}'&&depth>0)depth--;else if(c===close&&depth===0)break;}}
+  if(end===text.length){issues.push(`${file}：未闭合的 @${type}（第 ${text.slice(0,start).split('\n').length} 行）`);break;}
+  const body=text.slice(i,end);i=end+1;if(type==='comment'||type==='preamble')continue;const comma=type==='string'?-1:body.indexOf(',');const key=comma<0?'':body.slice(0,comma).trim();const raw=type==='string'?body:body.slice(comma+1),fields:Record<string,string>={};let p=0;
+  while(p<raw.length){const m=raw.slice(p).match(/^\s*,?\s*([\w-]+)\s*=\s*/);if(!m){p++;continue;}p+=m[0].length;let value='';for(;;){while(/\s/.test(raw[p]||'')&&p<raw.length)p++;const first=raw[p];let part='';if(first==='{'||first==='"'){p++;let level=first==='{'?1:0;for(;p<raw.length;p++){const c=raw[p];if(c==='\\'){part+=raw.slice(p,p+2);p++;continue;}if(first==='{'){if(c==='{')level++;if(c==='}'){level--;if(level===0){p++;break;}}}else if(c==='"'){p++;break;}part+=c;}}else{const atom=raw.slice(p).match(/^[^,#\s]+/)?.[0]||'';p+=atom.length;part=macros.get(atom.toLowerCase())||atom;}value+=part;while(p<raw.length&&/\s/.test(raw[p]))p++;if(raw[p]!=='#')break;p++;}fields[m[1].toLowerCase()]=clean(value);}
+  if(type==='string'){for(const [name,value]of Object.entries(fields))macros.set(name,value);continue;}if(!key){issues.push(`${file}：文献缺少引用键`);continue;}entries.push({key,type,fields,file,source:text.slice(start,end+1),start,end:end+1,uses:[]});
+ }
+ return {entries,issues};
+}
+export function attachCitationUses(entries:BibEntry[],documents:{file:string;text:string}[]){const byKey=new Map<string,BibEntry[]>();for(const e of entries){e.uses=[];byKey.set(e.key,[...(byKey.get(e.key)||[]),e]);}for(const {file,text}of documents){const cleanText=text.replace(/(?<!\\)%[^\n]*/g,m=>' '.repeat(m.length));for(const m of cleanText.matchAll(/\\(?:[A-Za-z]*cite[A-Za-z]*|nocite)\*?(?:\[[^\]]*\])*\s*\{([^}]+)\}/g)){for(const key of m[1].split(',').map(k=>k.trim()))for(const entry of byKey.get(key)||[])entry.uses.push({file,start:m.index!,end:m.index!+m[0].length,line:text.slice(0,m.index).split('\n').length});}}return entries;}

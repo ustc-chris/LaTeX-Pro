@@ -1,0 +1,4 @@
+import path from 'node:path';
+export function compilationPaths(root:string,main:string,outDir='.'){const output=path.resolve(root,outDir),rel=path.relative(root,output);if(rel==='..'||rel.startsWith('..'+path.sep)||path.isAbsolute(rel))throw Error('编译输出目录必须在当前项目内');const doc=path.resolve(root,main),name=path.basename(doc),stem=name.replace(/\.[^.]+$/,'');return {output,pdf:path.join(output,stem+'.pdf'),variables:{ROOT:root,DIR:path.dirname(doc),DOC:doc.replace(/\.[^.]+$/,''),DOC_EXT:doc,DOCFILE:stem,DOCFILE_EXT:name,OUTDIR:output}};}
+
+export function toolExecution(tool:{command:string;env?:Record<string,string>},variables:Record<string,string>){const bibtex=/^bibtex(?:\.exe)?$/i.test(path.basename(tool.command));return {cwd:bibtex?variables.OUTDIR:variables.DIR,env:{...(bibtex?{BIBINPUTS:tool.env?.BIBINPUTS||variables.DIR+'//'+path.delimiter+variables.ROOT+'//'+path.delimiter+(process.env.BIBINPUTS||'')}:{}),...tool.env}};}
